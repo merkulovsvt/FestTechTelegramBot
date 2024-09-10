@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
 
 from bot.keyboards.user_boards import reply_start
-from bot.utils.requests import add_user_if_not_exists
+from bot.utils.requests import add_user_if_not_exists, update_user_activity
 from bot.utils.states import User
 
 router = Router()
@@ -19,8 +19,9 @@ async def command_start_handler(message: types.Message, state: FSMContext):
     await message.answer_photo(photo=photo, caption=text, reply_markup=reply_markup)
 
     await add_user_if_not_exists(chat_id=message.chat.id, username=message.from_user.username)
-
     await state.set_state(User.menu_active)
+
+    await update_user_activity(chat_id=message.chat.id)
 
 
 ignore_text = ("🎉 Начать квест!", "🔍 Узнать больше про работу центра")
@@ -39,3 +40,5 @@ async def incorrect_user_menu_message_handler(message: types.Message):
     text = "Чтобы взаимодействовать с ботом, нажми на кнопку!"
     _, reply_markup = reply_start()
     await message.answer(text=text, reply_markup=reply_markup)
+
+    await update_user_activity(chat_id=message.chat.id)

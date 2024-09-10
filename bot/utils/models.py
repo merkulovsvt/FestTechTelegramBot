@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, Boolean, String
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, Boolean, String, DateTime
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -13,18 +15,20 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, index=True)
-    chat_id = Column(Integer, unique=True, index=True)
-    username = Column(String, unique=True, index=True)
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer, unique=True)
+    username = Column(String, unique=True)
     participates_in_lottery = Column(Boolean, default=False)
     task_type = Column(String, unique=False, default='')
+    last_activity = Column(DateTime, unique=False, default=datetime.now(), onupdate=datetime.now())
+    notification_check = Column(Boolean, default=False)
 
 
 class StudyUser(Base):
     __tablename__ = 'study_users'
-    id = Column(Integer, primary_key=True, index=True)
-    chat_id = Column(Integer, unique=True, index=True)
-    username = Column(String, unique=True, index=True)
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer, unique=True)
+    username = Column(String, unique=True)
 
     name = Column(String, unique=False, index=False)
     program = Column(String, unique=False, index=False)
@@ -33,9 +37,9 @@ class StudyUser(Base):
 
 class ExpertUser(Base):
     __tablename__ = 'expert_users'
-    id = Column(Integer, primary_key=True, index=True)
-    chat_id = Column(Integer, unique=True, index=True)
-    username = Column(String, unique=True, index=True)
+    id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer, unique=True)
+    username = Column(String, unique=True)
 
     name = Column(String, unique=False, index=False)
     area_of_expertise = Column(String, unique=False, index=False)

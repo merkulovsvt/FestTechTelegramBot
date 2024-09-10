@@ -7,12 +7,361 @@ from aiogram.types import FSInputFile
 
 from bot.keyboards.contest_boards import inline_first_task_process, inline_third_task_admin
 from bot.utils.callbacks import Task1Answer, Task3Admin
-from bot.utils.config import task1_config, task2_config, task3_config, task4_config, task5_config, task6_config
+from bot.utils.config import task1_config, task2_config, task3_config, task4_config, task5_config, task6_config, \
+    task7_config, complete_texts
 from bot.utils.filters import MTaskFilter, CTaskFilter
-from bot.utils.requests import change_task_type, get_task_type
+from bot.utils.requests import change_task_type, get_task_type, update_user_activity
 from bot.utils.states import User
 
 router = Router()
+
+
+# Хендлер для старта первого задания
+@router.message(F.text.lower().contains("начать квест"),
+                MTaskFilter(""),
+                StateFilter(User.menu_active, User.info_active))
+async def first_task_start_handler(message: types.Message, state: FSMContext):
+    await message.answer(text=task1_config.start_text)
+    await state.set_state(User.quest_active)
+
+    await change_task_type(chat_id=message.chat.id,
+                           task_type="start_task1")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для условия первого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task1"))
+async def first_task_conditions_handler(message: types.Message):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим к первому заданию!")
+
+        await message.answer(text=task1_config.process_text)
+
+        photo = FSInputFile("bot/media/task1/pic_1.jpeg")
+        text, reply_markup = inline_first_task_process(question_id=1)
+
+        await message.answer_photo(photo=photo,
+                                   reply_markup=reply_markup)
+
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task1")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки первого задания
+@router.callback_query(~F.text.lower().contains("узнать больше про работу центра"), Task1Answer.filter(),
+                       StateFilter(User.quest_active),
+                       CTaskFilter("do_task1"))
+async def first_task_process_handler(callback: types.CallbackQuery, callback_data: Task1Answer):
+    question_id = callback_data.question_id
+    answer_id = callback_data.answer_id
+
+    if question_id == answer_id and question_id < 4:
+        photo = FSInputFile(f"bot/media/task1/pic_{question_id + 1}.jpeg")
+
+        _, reply_markup = inline_first_task_process(question_id=question_id,
+                                                    correct_answer_id=answer_id)
+
+        await callback.message.edit_reply_markup(reply_markup=reply_markup)
+
+        text, reply_markup = inline_first_task_process(question_id=question_id + 1)
+
+        await asyncio.sleep(0.05)
+
+        await callback.message.edit_media(media=types.InputMediaPhoto(media=photo),
+                                          reply_markup=reply_markup)
+
+    elif question_id == answer_id and question_id == 4:
+
+        _, reply_markup = inline_first_task_process(question_id=question_id,
+                                                    correct_answer_id=answer_id)
+
+        await callback.message.edit_reply_markup(reply_markup=reply_markup)
+
+        # await callback.message.answer(text=task1_config.end_text)
+        await callback.message.answer(text="Всё верно!")  # Надо ли
+
+        await callback.message.answer(text=task2_config.start_text)
+        await change_task_type(chat_id=callback.message.chat.id,
+                               task_type="start_task2")
+
+    else:
+        text, reply_markup = inline_first_task_process(question_id=question_id,
+                                                       wrong_answer_id=answer_id)
+
+        await callback.message.edit_reply_markup(reply_markup=reply_markup)
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для условия второго задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task2"))
+async def second_task_conditions_handler(message: types.Message):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим ко второму заданию!")
+
+        await message.answer(text=task2_config.process_text,
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task2")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки второго задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task2"))
+async def second_task_process_handler(message: types.Message):
+    if message.text.lower() in ("vert dider", "vertdider"):
+        await message.answer(text=task2_config.end_text)
+
+        # Старт третьего задания
+        await message.answer(text=task3_config.start_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="start_task3")
+
+    else:
+        await message.answer(text="Попробуй ещё раз, проверь опечатки")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для условия третьего задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task3"))
+async def third_task_conditions_handler(message: types.Message, state: FSMContext):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим к третьему заданию!")
+
+        await message.answer(text=task3_config.process_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task3")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки третьего задания (фото)
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task3"), F.photo)
+async def third_task_photo_process_handler(message: types.Message):
+    file_id = message.photo[-1].file_id
+
+    reply_markup = inline_third_task_admin(chat_id=message.chat.id)
+
+    await message.bot.send_photo(chat_id=490082094,
+                                 photo=file_id,
+                                 caption=f"@{message.from_user.username}",
+                                 reply_markup=reply_markup)
+
+    await message.answer(text="Ждите проверку")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки третьего задания (не фото)
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task3"), ~F.photo)
+async def third_task_not_photo_process_handler(message: types.Message):
+    await message.answer("Это не фото 😞")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для проверки третьего задания (только админ)
+@router.callback_query(Task3Admin.filter())
+async def third_task_photo_process_handler(callback: types.CallbackQuery, callback_data: Task3Admin):
+    chat_id = callback_data.chat_id
+    approved = callback_data.approved
+
+    if approved:
+        await callback.bot.send_message(chat_id=chat_id,
+                                        text=task3_config.end_text)
+
+        # Старт четвертого задания
+        await callback.bot.send_message(chat_id=chat_id,
+                                        text=task4_config.start_text)
+        await change_task_type(chat_id=chat_id,
+                               task_type="start_task4")
+    else:
+        await callback.bot.send_message(chat_id=chat_id,
+                                        text="Фото не подходит, попробуйте снова!")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для условий четвертого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task4"))
+async def fourth_task_conditions_handler(message: types.Message):
+    if message.text == "код":
+        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
+
+        await message.answer(text=task4_config.process_text)
+        await message.answer(text="И следом ещё один вопрос:\nГде был Лев Ландау во время ежовщины?")
+        await message.answer(text="И самое занятное: на эти два вопроса ОДИН ответ. Впишите его ниже")
+
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task4")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки четвертого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task4"))
+async def fourth_task_process_handler(message: types.Message):
+    if "опал" in message.text.lower():
+        await message.answer(text=task4_config.end_text)
+
+        # Старт пятого задания
+        await message.answer(text=task5_config.start_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="start_task5")
+    else:
+        await message.answer(text="Давай ещё одну попытку!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для условий пятого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task5"))
+async def fifth_task_conditions_handler(message: types.Message):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
+
+        await message.answer(text=task5_config.process_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task5")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки пятого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task5"))
+async def fifth_task_process_handler(message: types.Message):
+    if message.text == "33":
+        await message.answer(text=task5_config.end_text)
+
+        # Старт шестого задания
+        await message.answer(text=task6_config.start_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="start_task6")
+    else:
+        await message.answer(
+            text="Кажется, нужна ещё одна попытка (мы не узнаем, если ты будешь пользоваться калькулятором)")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для условий шестого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task6"))
+async def sixth_task_conditions_handler(message: types.Message):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
+
+        await message.answer(text=task6_config.process_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task6")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки шестого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task6"))
+async def sixth_task_conditions_handler(message: types.Message):
+    if message.text == "33":
+        await message.answer(text=task6_config.end_text)
+
+        # Старт седьмого задания
+        await message.answer(text=task7_config.start_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="start_task7")
+    else:
+        await message.answer(
+            text="Кажется, тебе нужна ещё одна попытка")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для условий седьмого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("start_task7"))
+async def seventh_task_conditions_handler(message: types.Message):
+    if message.text.lower() == "код":
+        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
+
+        await message.answer(text=task7_config.process_text)
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task7")
+    else:
+        await message.answer(text="Код неверный, попробуй ещё раз!")
+
+    await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки седьмого задания
+@router.message(~F.text.lower().contains("узнать больше про работу центра"),
+                StateFilter(User.quest_active),
+                MTaskFilter("do_task7"))
+async def seventh_task_conditions_handler(message: types.Message):
+    if message.text == "33":
+        await message.answer(text=task7_config.end_text)
+
+        # Финиш #TODO
+        await message.answer(text=complete_texts[0],
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
+        await message.answer(text=complete_texts[1],
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="complete")
+    else:
+        await message.answer(
+            text="Кажется, тебе нужна ещё одна попытка")
+
+    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для возвращения к заданию
@@ -53,254 +402,46 @@ async def return_task_handler(message: types.Message, state: FSMContext):
     elif task_type == "start_task6":
         await message.answer(text=task6_config.start_text)
     elif task_type == "do_task6":
-        # await message.answer(text=task6_config.start_text)
-        pass
+        await message.answer(text=task6_config.process_text)
+    elif task_type == "start_task7":
+        await message.answer(text=task7_config.start_text)
+    elif task_type == "do_task7":
+        await message.answer(text=task7_config.process_text)
+    elif task_type == "complete":
+        await message.answer(text=complete_texts[0],
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
+        await message.answer(text=complete_texts[1],
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+        await message.answer(text="Поздравляю, вы закончили квест. Участвуем в лотерее? :)")
+
+    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки повторного вызова квеста изнутри
 @router.message(F.text.lower().contains("начать квест"),
-                StateFilter(User.quest_active))
+                StateFilter(User.quest_active),
+                ~MTaskFilter("complete"))
 async def inform_quest_handler(message: types.Message):
     await message.answer(text="Вы уже проходите квест!")
 
+    await update_user_activity(chat_id=message.chat.id)
 
-# Хендлер для старта первого задания
+
+# Хендлер для обработки повторного вызова квеста изнутри (complete)
 @router.message(F.text.lower().contains("начать квест"),
-                MTaskFilter(""),
-                StateFilter(User.menu_active, User.info_active))
-async def first_task_start_handler(message: types.Message, state: FSMContext):
-    await message.answer(text=task1_config.start_text)
-    await state.set_state(User.quest_active)
-
-    await change_task_type(chat_id=message.chat.id, task_type="start_task1")
-
-
-# Хендлер для условия первого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
                 StateFilter(User.quest_active),
-                MTaskFilter("start_task1"))
-async def first_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
-        await message.answer(text="Ура, код верный! Переходим к первому заданию!")
+                MTaskFilter("complete"))
+async def inform_complete_quest_handler(message: types.Message):
+    await message.answer(text=complete_texts[0],
+                         parse_mode="HTML",
+                         disable_web_page_preview=True)
 
-        await message.answer(text=task1_config.process_text)
+    await message.answer(text=complete_texts[1],
+                         parse_mode="HTML",
+                         disable_web_page_preview=True)
+    await message.answer(text="Поздравляю, вы закончили квест. Участвуем в лотерее? :)")
 
-        photo = FSInputFile("bot/media/task1/pic_1.jpeg")
-        text, reply_markup = inline_first_task_process(question_id=1)
-
-        await message.answer_photo(photo=photo,
-                                   reply_markup=reply_markup)
-
-        await change_task_type(chat_id=message.chat.id, task_type="do_task1")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
-
-
-# Хендлер для обработки первого задания
-@router.callback_query(~F.text.lower().contains("узнать больше про работу центра"), Task1Answer.filter(),
-                       StateFilter(User.quest_active),
-                       CTaskFilter("do_task1"))
-async def first_task_process_handler(callback: types.CallbackQuery, callback_data: Task1Answer):
-    question_id = callback_data.question_id
-    answer_id = callback_data.answer_id
-
-    if question_id == answer_id and question_id < 4:
-        photo = FSInputFile(f"bot/media/task1/pic_{question_id + 1}.jpeg")
-
-        _, reply_markup = inline_first_task_process(question_id=question_id,
-                                                    correct_answer_id=answer_id)
-
-        await callback.message.edit_reply_markup(reply_markup=reply_markup)
-
-        text, reply_markup = inline_first_task_process(question_id=question_id + 1)
-
-        await asyncio.sleep(0.05)
-
-        await callback.message.edit_media(media=types.InputMediaPhoto(media=photo),
-                                          reply_markup=reply_markup)
-
-    elif question_id == answer_id and question_id == 4:
-
-        _, reply_markup = inline_first_task_process(question_id=question_id,
-                                                    correct_answer_id=answer_id)
-
-        await callback.message.edit_reply_markup(reply_markup=reply_markup)
-
-        # await callback.message.answer(text=task1_config.end_text)
-        await callback.message.answer(text="Всё верно!")  # Надо ли
-
-        await callback.message.answer(text=task2_config.start_text)
-        await change_task_type(chat_id=callback.message.chat.id, task_type="start_task2")
-
-    else:
-        text, reply_markup = inline_first_task_process(question_id=question_id,
-                                                       wrong_answer_id=answer_id)
-
-        await callback.message.edit_reply_markup(reply_markup=reply_markup)
-
-    await callback.answer()
-
-
-# Хендлер для условия второго задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("start_task2"))
-async def second_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
-        await message.answer(text="Ура, код верный! Переходим ко второму заданию!")
-
-        await message.answer(text=task2_config.process_text,
-                             parse_mode="HTML",
-                             disable_web_page_preview=True)
-
-        await change_task_type(chat_id=message.chat.id, task_type="do_task2")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
-
-
-# Хендлер для обработки второго задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("do_task2"))
-async def second_task_process_handler(message: types.Message):
-    if message.text.lower() in ("vert dider", "vertdider"):
-        await message.answer(text=task2_config.end_text)
-
-        # Старт третьего задания
-        await message.answer(text=task3_config.start_text)
-        await change_task_type(chat_id=message.chat.id, task_type="start_task3")
-
-    else:
-        await message.answer(text="Попробуй ещё раз, проверь опечатки")
-
-
-# Хендлер для условия третьего задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("start_task3"))
-async def third_task_conditions_handler(message: types.Message, state: FSMContext):
-    if message.text.lower() == "код":
-        await message.answer(text="Ура, код верный! Переходим к третьему заданию!")
-
-        await message.answer(text=task3_config.process_text)
-        await change_task_type(chat_id=message.chat.id, task_type="do_task3")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
-
-
-# Хендлер для обработки третьего задания (фото)
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("do_task3"), F.photo)
-async def third_task_photo_process_handler(message: types.Message):
-    file_id = message.photo[-1].file_id
-
-    reply_markup = inline_third_task_admin(chat_id=message.chat.id)
-
-    await message.bot.send_photo(chat_id=490082094,
-                                 photo=file_id,
-                                 caption=f"@{message.from_user.username}",
-                                 reply_markup=reply_markup)
-
-    await message.answer(text="Ждите проверку")
-
-
-# Хендлер для обработки третьего задания (не фото)
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("do_task3"), ~F.photo)
-async def third_task_not_photo_process_handler(message: types.Message):
-    await message.answer("Это не фото 😞")
-
-
-# Хендлер для проверки третьего задания (только админ)
-@router.callback_query(Task3Admin.filter())
-async def third_task_photo_process_handler(callback: types.CallbackQuery, callback_data: Task3Admin):
-    chat_id = callback_data.chat_id
-    approved = callback_data.approved
-
-    if approved:
-        await callback.bot.send_message(chat_id=chat_id, text=task3_config.end_text)
-
-        # Старт четвертого задания
-        await callback.bot.send_message(chat_id=chat_id, text=task4_config.start_text)
-        await change_task_type(chat_id=chat_id, task_type="start_task4")
-    else:
-        await callback.bot.send_message(chat_id=chat_id, text="Фото не подходит, попробуйте снова!")
-
-    await callback.answer()
-
-
-# Хендлер для условий четвертого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("start_task4"))
-async def fourth_task_conditions_handler(message: types.Message):
-    if message.text == "код":
-        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
-
-        await message.answer(text=task4_config.process_text)
-        await message.answer(text="И следом ещё один вопрос:\nГде был Лев Ландау во время ежовщины?")
-        await message.answer(text="И самое занятное: на эти два вопроса ОДИН ответ. Впишите его ниже")
-        await change_task_type(chat_id=message.chat.id, task_type="do_task4")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
-
-
-# Хендлер для обработки четвертого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("do_task4"))
-async def fourth_task_process_handler(message: types.Message):
-    if "опал" in message.text.lower():
-        await message.answer(text=task4_config.end_text)
-
-        # Старт пятого задания
-        await message.answer(text=task5_config.start_text)
-        await change_task_type(chat_id=message.chat.id, task_type="start_task5")
-    else:
-        await message.answer(text="Давай ещё одну попытку!")
-
-
-# Хендлер для условий пятого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("start_task5"))
-async def fifth_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
-        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
-
-        await message.answer(text=task5_config.process_text)
-        await change_task_type(chat_id=message.chat.id, task_type="do_task5")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
-
-
-# Хендлер для обработки пятого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("do_task5"))
-async def fifth_task_process_handler(message: types.Message):
-    if message.text == "33":
-        await message.answer(text=task5_config.end_text)
-
-        # Старт шестого задания
-        await message.answer(text=task6_config.start_text)
-        await change_task_type(chat_id=message.chat.id, task_type="start_task6")
-    else:
-        await message.answer(
-            text="Кажется, нужна ещё одна попытка (мы не узнаем, если ты будешь пользоваться калькулятором)")
-
-
-# Хендлер для условий шестого задания
-@router.message(~F.text.lower().contains("узнать больше про работу центра"),
-                StateFilter(User.quest_active),
-                MTaskFilter("start_task6"))
-async def fifth_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
-        await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
-
-        await message.answer(text=task6_config.process_text)
-        await change_task_type(chat_id=message.chat.id, task_type="do_task6")
-    else:
-        await message.answer(text="Код неверный, попробуй ещё раз!")
+    await update_user_activity(chat_id=message.chat.id)

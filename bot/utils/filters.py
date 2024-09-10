@@ -14,11 +14,8 @@ class MTaskFilter(Filter):
     async def __call__(self, message: Message, state: FSMContext) -> bool:
         async with async_session() as session:
             result = await session.execute(
-                select(User).where(User.chat_id == message.chat.id)
-            )
-            existing_user = result.scalars().first()
-
-            return existing_user.task_type == self.task_type
+                select(User).where(User.chat_id == message.chat.id))
+            return result.scalars().first().task_type == self.task_type
 
 
 class CTaskFilter(Filter):
@@ -28,8 +25,5 @@ class CTaskFilter(Filter):
     async def __call__(self, callback: CallbackQuery, state: FSMContext) -> bool:
         async with async_session() as session:
             result = await session.execute(
-                select(User).where(User.chat_id == callback.message.chat.id)
-            )
-            existing_user = result.scalars().first()
-
-            return existing_user.task_type == self.task_type
+                select(User).where(User.chat_id == callback.message.chat.id))
+            return result.scalars().first().task_type == self.task_type

@@ -23,7 +23,7 @@ def form_filter(study: bool):
                 "- Сфера экспертности\n- Место работы, регалии\n- Предпочтительный способ связи")
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="Да", callback_data="study_form" if study else "expert_form")
-    builder.button(text="Отмена", callback_data='cancel_form')
+    builder.button(text="✅ Продолжить", callback_data="study_form" if study else "expert_form")
+    builder.button(text="❌ Отменить", callback_data='cancel_form')
 
     return text, builder.as_markup()

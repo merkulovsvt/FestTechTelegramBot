@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-python-dotenv = "*"
+python-dotenv = "==1.0.1"
 aiogram = "==3.1.1"
-sqlalchemy = "*"
-aiosqlite = "*"
-redis = "*"
+sqlalchemy = "==2.0.34"
+aiosqlite = "==0.20.0"
+redis = "==5.0.8"
+apscheduler = "==3.10.4"
 
 [dev-packages]
 

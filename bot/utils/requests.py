@@ -1,9 +1,21 @@
+from datetime import datetime
+
 from sqlalchemy import select
 
 from bot.utils.models import async_session, User, StudyUser, ExpertUser
 
 
 # User requests
+async def update_user_activity(chat_id: int):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.chat_id == chat_id))
+        existing_user = result.scalars().first()
+        existing_user.last_activity = datetime.now()
+        existing_user.notification_check = False
+        await session.commit()
+
+
 async def add_user_if_not_exists(chat_id: int, username: str):
     async with async_session() as session:
         result = await session.execute(
