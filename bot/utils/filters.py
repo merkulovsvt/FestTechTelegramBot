@@ -27,3 +27,12 @@ class CTaskFilter(Filter):
             result = await session.execute(
                 select(User).where(User.chat_id == callback.message.chat.id))
             return result.scalars().first().task_type == self.task_type
+
+
+class GotPrize(Filter):
+
+    async def __call__(self, message: Message, state: FSMContext) -> bool:
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.chat_id == message.chat.id))
+            return bool(result.scalars().first().prize_id)
