@@ -1,22 +1,25 @@
 import asyncio
+import os
 
 from aiogram import Router, types, F
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
+from dotenv import load_dotenv
 
 from bot.keyboards.contest_boards import inline_first_task_process, inline_third_task_admin_choose, \
-    inline_lottery_start, \
-    inline_prize_data, inline_sixth_task_hum, inline_sixth_task_phys, inline_third_task_admin_result, \
-    inline_seventh_task_start, inline_get_prize_start
-from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer
+    inline_lottery_start, inline_prize_data, inline_sixth_task_hum, inline_sixth_task_phys, \
+    inline_third_task_admin_result, inline_seventh_task_start, inline_get_prize_start, inline_absolut_task, \
+    inline_pix_task
+from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer, Task7Answer
 from bot.utils.config import task1_config, task2_config, task3_config, task4_config, task5_config, task6_config, \
     task7_config, complete_texts
 from bot.utils.filters import MTaskFilter, CTaskFilter, GotPrize
-from bot.utils.requests import change_task_type, get_task_type, update_user_activity, got_prize, get_prize, \
-    participate_in_lottery, set_lottery_participation
+from bot.utils.requests import change_task_type, get_task_type, update_user_activity, got_prize, set_prize, \
+    participate_in_lottery, set_lottery_participation, get_prize
 from bot.utils.states import User
 
+load_dotenv()
 router = Router()
 
 
@@ -39,7 +42,7 @@ async def first_task_start_handler(message: types.Message, state: FSMContext):
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task1"))
 async def first_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "безграничность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к первому заданию!")
 
         await message.answer(text=task1_config.process_text)
@@ -62,7 +65,7 @@ async def first_task_conditions_handler(message: types.Message):
 @router.callback_query(~F.text.lower().contains("узнать больше про работу центра"), Task1Answer.filter(),
                        StateFilter(User.quest_active),
                        CTaskFilter("do_task1"))
-async def first_task_process_handler(callback: types.CallbackQuery, callback_data: Task1Answer):
+async def callback_first_task_process_handler(callback: types.CallbackQuery, callback_data: Task1Answer):
     question_id = callback_data.question_id
     answer_id = callback_data.answer_id
 
@@ -111,7 +114,7 @@ async def first_task_process_handler(callback: types.CallbackQuery, callback_dat
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task2"))
 async def second_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "скорость" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим ко второму заданию!")
 
         await message.answer(text=task2_config.process_text,
@@ -131,7 +134,7 @@ async def second_task_conditions_handler(message: types.Message):
                 StateFilter(User.quest_active),
                 MTaskFilter("do_task2"))
 async def second_task_process_handler(message: types.Message):
-    if message.text.lower() in ("vert dider", "vertdider"):
+    if "vert" in message.text.lower() and "dider" in message.text.lower():
         await message.answer(text=task2_config.end_text)
 
         # Старт третьего задания
@@ -149,8 +152,8 @@ async def second_task_process_handler(message: types.Message):
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task3"))
-async def third_task_conditions_handler(message: types.Message, state: FSMContext):
-    if message.text.lower() == "код":
+async def third_task_conditions_handler(message: types.Message):
+    if "актуальность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к третьему заданию!")
 
         await message.answer(text=task3_config.process_text)
@@ -171,7 +174,7 @@ async def third_task_photo_process_handler(message: types.Message):
 
     reply_markup = inline_third_task_admin_choose(chat_id=message.chat.id)
 
-    await message.bot.send_photo(chat_id=490082094,
+    await message.bot.send_photo(chat_id=os.getenv("MODERATOR_CHAT_ID"),
                                  photo=file_id,
                                  caption=f"@{message.from_user.username}",
                                  reply_markup=reply_markup)
@@ -193,7 +196,7 @@ async def third_task_not_photo_process_handler(message: types.Message):
 
 # Хендлер для проверки третьего задания (только админ)
 @router.callback_query(Task3Admin.filter())
-async def third_task_photo_process_handler(callback: types.CallbackQuery, callback_data: Task3Admin):
+async def callback_third_task_photo_process_handler(callback: types.CallbackQuery, callback_data: Task3Admin):
     chat_id = callback_data.chat_id
     approved = callback_data.approved
 
@@ -225,7 +228,7 @@ async def third_task_photo_process_handler(callback: types.CallbackQuery, callba
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task4"))
 async def fourth_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "доступность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к четвертому заданию!")
 
         await message.answer(text=task4_config.process_text)
@@ -263,7 +266,7 @@ async def fourth_task_process_handler(message: types.Message):
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task5"))
 async def fifth_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "разнообразие" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к пятому заданию!")
 
         await message.answer(text=task5_config.process_text)
@@ -299,7 +302,7 @@ async def fifth_task_process_handler(message: types.Message):
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task6"))
 async def sixth_task_phys_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "эффективность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к шестому заданию!")
 
         photo = FSInputFile("bot/media/task6/pic_1.png")
@@ -320,11 +323,13 @@ async def sixth_task_phys_conditions_handler(message: types.Message):
 @router.callback_query(StateFilter(User.quest_active),
                        F.data == "task6_hum",
                        CTaskFilter("do_task6_phys") or CTaskFilter("do_task6_hum"))
-async def sixth_task_hum_conditions_handler(callback: types.CallbackQuery):
+async def callback_sixth_task_hum_conditions_handler(callback: types.CallbackQuery):
     await change_task_type(chat_id=callback.message.chat.id,
                            task_type="do_task6_hum")
 
     text, reply_markup = inline_sixth_task_hum()
+
+    await callback.message.delete()
 
     await callback.message.answer(text=text,
                                   reply_markup=reply_markup)
@@ -356,7 +361,7 @@ async def sixth_task_phys_process_handler(message: types.Message):
 @router.callback_query(StateFilter(User.quest_active),
                        CTaskFilter("do_task6_hum"),
                        Task6Answer.filter())
-async def sixth_task_phys_process_handler(callback: types.CallbackQuery, callback_data: Task6Answer.filter()):
+async def callback_sixth_task_phys_process_handler(callback: types.CallbackQuery, callback_data: Task6Answer):
     answer_id = callback_data.answer_id
 
     text, reply_markup = inline_sixth_task_hum(answer_id=answer_id)
@@ -373,6 +378,8 @@ async def sixth_task_phys_process_handler(callback: types.CallbackQuery, callbac
         await change_task_type(chat_id=callback.message.chat.id,
                                task_type="start_task7")
 
+    await callback.answer()
+
     await update_user_activity(chat_id=callback.message.chat.id)
 
 
@@ -381,7 +388,7 @@ async def sixth_task_phys_process_handler(callback: types.CallbackQuery, callbac
                 StateFilter(User.quest_active),
                 MTaskFilter("start_task7"))
 async def seventh_task_conditions_handler(message: types.Message):
-    if message.text.lower() == "код":
+    if "практик" in message.text.lower() and "ориентированность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к последнему заданию!")
 
         text, reply_markup = inline_seventh_task_start()
@@ -397,13 +404,86 @@ async def seventh_task_conditions_handler(message: types.Message):
     await update_user_activity(chat_id=message.chat.id)
 
 
-# Хендлер для обработки седьмого задания
+# Хендлер для меню седьмого задания через inline кнопку
+@router.callback_query(StateFilter(User.quest_active),
+                       CTaskFilter("do_task7_absolut"),
+                       F.data == "task7_menu")
+async def callback_absolut_seventh_task_menu_handler(callback: types.CallbackQuery):
+    text, reply_markup = inline_seventh_task_start()
+
+    await callback.message.edit_text(text=text,
+                                     reply_markup=reply_markup)
+
+    await change_task_type(chat_id=callback.message.chat.id,
+                           task_type="do_task7")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для меню седьмого задания через inline кнопку
+@router.callback_query(StateFilter(User.quest_active),
+                       CTaskFilter("do_task7_pix"),
+                       F.data == "task7_menu")
+async def callback_pix_seventh_task_menu_handler(callback: types.CallbackQuery):
+    text, reply_markup = inline_seventh_task_start()
+
+    await callback.message.edit_text(text=text,
+                                     reply_markup=reply_markup)
+
+    await change_task_type(chat_id=callback.message.chat.id,
+                           task_type="do_task7")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для обработки седьмого задания (absolut)
+@router.callback_query(StateFilter(User.quest_active),
+                       CTaskFilter("do_task7"),
+                       F.data == "absolut_task")
+async def callback_seventh_task_absolut_conditions_handler(callback: types.CallbackQuery):
+    text, reply_markup = inline_absolut_task()
+
+    await callback.message.edit_text(text=text,
+                                     reply_markup=reply_markup)
+
+    await change_task_type(chat_id=callback.message.chat.id,
+                           task_type="do_task7_absolut")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для обработки седьмого задания (pix)
+@router.callback_query(StateFilter(User.quest_active),
+                       CTaskFilter("do_task7"),
+                       F.data == "pix_task")
+async def callback_seventh_task_absolut_conditions_handler(callback: types.CallbackQuery):
+    text, reply_markup = inline_pix_task()
+
+    await callback.message.edit_text(text=text,
+                                     reply_markup=reply_markup)
+
+    await change_task_type(chat_id=callback.message.chat.id,
+                           task_type="do_task7_pix")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
+
+
+# Хендлер для обработки седьмого задания (absolut)
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
                 StateFilter(User.quest_active),
-                MTaskFilter("do_task7"))
-async def seventh_task_conditions_handler(message: types.Message):
-    if message.text == "33":
-        await message.answer(text=task7_config.end_text)
+                MTaskFilter("do_task7_absolut"))
+async def seventh_task_absolut_process_handler(message: types.Message):
+    if "37.5" in message.text or "37,5" in message.text:
+
+        await message.answer(task7_config.end_text)
 
         await message.answer(text=complete_texts[0],
                              parse_mode="HTML",
@@ -413,19 +493,70 @@ async def seventh_task_conditions_handler(message: types.Message):
                              parse_mode="HTML",
                              disable_web_page_preview=True)
 
+        text, reply_markup = inline_get_prize_start()
+        await message.answer(text=text,
+                             reply_markup=reply_markup,
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
         await change_task_type(chat_id=message.chat.id,
                                task_type="complete")
-
-        text, reply_markup = inline_get_prize_start()
-
-        await message.answer(text=text,
-                             reply_markup=reply_markup)
-
     else:
-        await message.answer(
-            text="Кажется, тебе нужна ещё одна попытка")
+        await message.answer(text="Давай пересчитаем ещё раз")
 
     await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для обработки седьмого задания (pix)
+@router.callback_query(Task7Answer.filter(),
+                       StateFilter(User.quest_active),
+                       CTaskFilter("do_task7_pix"))
+async def callback_seventh_task_absolut_process_handler(callback: types.CallbackQuery, callback_data: Task7Answer):
+    answer_id = callback_data.answer_id
+
+    text, reply_markup = inline_pix_task(answer_id=answer_id)
+
+    await callback.message.edit_text(text=text,
+                                     reply_markup=reply_markup)
+
+    if answer_id == 1:
+
+        await callback.message.answer(text="Процесс увольнения займет не менее 2 недель.")
+
+    elif answer_id == 2:
+
+        await callback.message.answer(text="Ассемблер / Си - слишком низкоуровневые языки для данной задачи, "
+                                           "а изучение множества сторонних библиотек других языков и разработка "
+                                           "решения займут гораздо больше 2 недель.")
+
+    elif answer_id == 3:
+
+        await callback.message.answer(
+            text="Программный робот RPA – это самый быстрый способ роботизации бизнес процессов, "
+                 "разработка рабочего прототипа займет от 2 часов до 3 дней, и все задачи "
+                 "бухгалтера поможет решить")
+
+        await callback.message.answer(text=complete_texts[0],
+                                      parse_mode="HTML",
+                                      disable_web_page_preview=True)
+
+        await callback.message.answer(text=complete_texts[1],
+                                      parse_mode="HTML",
+                                      disable_web_page_preview=True)
+
+        text, reply_markup = inline_get_prize_start()
+        await callback.message.answer(text=text,
+                                      reply_markup=reply_markup,
+                                      parse_mode="HTML",
+                                      disable_web_page_preview=True
+                                      )
+
+        await change_task_type(chat_id=callback.message.chat.id,
+                               task_type="complete")
+
+    await callback.answer()
+
+    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для обработки получения приза (первичное)
@@ -433,15 +564,15 @@ async def seventh_task_conditions_handler(message: types.Message):
                        CTaskFilter("complete"),
                        ~GotPrize(),
                        F.data == "get_prize")
-async def get_prize_handler(callback: types.CallbackQuery):
-    prize_data = await get_prize(chat_id=callback.message.chat.id)
+async def callback_get_prize_handler(callback: types.CallbackQuery):
+    prize_data = await set_prize(chat_id=callback.message.chat.id)
 
     if prize_data:
-        photo = FSInputFile(f"bot/media/logos/pic_{prize_data.get('id')}.jpeg")
-        text, reply_keyboard = inline_prize_data(prize_data=prize_data)
+        photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+        text, reply_markup = inline_prize_data(prize_data=prize_data)
         await callback.message.answer_photo(photo=photo,
                                             caption=text,
-                                            reply_keyboard=reply_keyboard)
+                                            reply_markup=reply_markup)
     else:
         await callback.message.answer(text="К сожалению, подарки кончились 😔")
 
@@ -449,7 +580,7 @@ async def get_prize_handler(callback: types.CallbackQuery):
     await callback.message.answer(text=text,
                                   reply_markup=reply_markup)
 
-    await callback.message.answer(text=complete_texts[4])
+    await callback.answer()
 
     await update_user_activity(chat_id=callback.message.chat.id)
 
@@ -459,16 +590,26 @@ async def get_prize_handler(callback: types.CallbackQuery):
                        CTaskFilter("complete"),
                        GotPrize(),
                        F.data == "get_prize")
-async def used_get_prize_handler(callback: types.CallbackQuery):
-    await callback.message.answer(text="Вы уже получили подарок! 🎁")
+async def callback_used_get_prize_handler(callback: types.CallbackQuery):
+    prize_data = await get_prize(chat_id=callback.message.chat.id)
 
-    if participate_in_lottery(chat_id=callback.message.chat.id):
-        await callback.message.answer(text="Вы уже участвуете в лотерее! 🎫")
+    photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+    text, reply_markup = inline_prize_data(prize_data=prize_data)
+    await callback.message.answer_photo(photo=photo,
+                                        caption=text,
+                                        reply_markup=reply_markup)
+
+    if await participate_in_lottery(chat_id=callback.message.chat.id):
+        text, reply_markup = inline_lottery_start(check=True)
+        await callback.message.answer(text=text,
+                                      reply_markup=reply_markup)
         await callback.message.answer(text=complete_texts[4])
     else:
         text, reply_markup = inline_lottery_start()
         await callback.message.answer(text=text,
                                       reply_markup=reply_markup)
+
+    await callback.answer()
 
     await update_user_activity(chat_id=callback.message.chat.id)
 
@@ -478,13 +619,16 @@ async def used_get_prize_handler(callback: types.CallbackQuery):
                        CTaskFilter("complete"),
                        GotPrize(),
                        F.data == "lottery_start")
-async def lottery_prize_handler(callback: types.CallbackQuery):
-    if participate_in_lottery(chat_id=callback.message.chat.id):
-        await callback.message.answer(text="Вы уже участвуете в лотерее! 🎫")
-    else:
+async def callback_lottery_prize_handler(callback: types.CallbackQuery):
+    if not await participate_in_lottery(chat_id=callback.message.chat.id):
         await set_lottery_participation(chat_id=callback.message.chat.id)
 
+    _, reply_markup = inline_lottery_start(check=True)
+    await callback.message.edit_reply_markup(reply_markup=reply_markup)
+
     await callback.message.answer(text=complete_texts[4])
+
+    await callback.answer()
 
     await update_user_activity(chat_id=callback.message.chat.id)
 
@@ -496,36 +640,50 @@ async def lottery_prize_handler(callback: types.CallbackQuery):
 async def return_task_handler(message: types.Message, state: FSMContext):
     await state.set_state(User.quest_active)
     task_type = await get_task_type(chat_id=message.chat.id)
+
     if task_type == "start_task1":
         await message.answer(text=task1_config.start_text)
+
     elif task_type == "do_task1":
+        await message.answer(text=task1_config.process_text)
+
         photo = FSInputFile("bot/media/task1/pic_1.jpeg")
         text, reply_markup = inline_first_task_process(question_id=1)
 
         await message.answer_photo(photo=photo,
                                    reply_markup=reply_markup)
+
     elif task_type == "start_task2":
         await message.answer(text=task2_config.start_text)
+
     elif task_type == "do_task2":
         await message.answer(text=task2_config.process_text,
                              parse_mode="HTML",
                              disable_web_page_preview=True)
+
     elif task_type == "start_task3":
         await message.answer(text=task3_config.start_text)
+
     elif task_type == "do_task3":
         await message.answer(text=task3_config.process_text)
+
     elif task_type == "start_task4":
         await message.answer(text=task4_config.start_text)
+
     elif task_type == "do_task4":
         await message.answer(text=task4_config.process_text)
         await message.answer(text="И следом ещё один вопрос:\nГде был Лев Ландау во время ежовщины?")
         await message.answer(text="И самое занятное: на эти два вопроса ОДИН ответ.\nВпишите его ниже")
+
     elif task_type == "start_task5":
         await message.answer(text=task5_config.start_text)
+
     elif task_type == "do_task5":
         await message.answer(text=task5_config.process_text)
+
     elif task_type == "start_task6":
         await message.answer(text=task6_config.start_text)
+
     elif task_type == "do_task6_phys":
         photo = FSInputFile("bot/media/task6/pic_1.png")
         text, reply_markup = inline_sixth_task_phys()
@@ -539,8 +697,23 @@ async def return_task_handler(message: types.Message, state: FSMContext):
 
     elif task_type == "start_task7":
         await message.answer(text=task7_config.start_text)
+
     elif task_type == "do_task7":
-        await message.answer(text=task7_config.process_text)
+
+        text, reply_markup = inline_seventh_task_start()
+
+        await message.answer(text=text,
+                             reply_markup=reply_markup)
+
+    elif task_type in ('do_task7_absolut', 'do_task7_pix'):
+        await change_task_type(chat_id=message.chat.id,
+                               task_type="do_task7")
+
+        text, reply_markup = inline_seventh_task_start()
+
+        await message.answer(text=text,
+                             reply_markup=reply_markup)
+
     elif task_type == "complete":
         await message.answer(text=complete_texts[0],
                              parse_mode="HTML",
@@ -550,18 +723,34 @@ async def return_task_handler(message: types.Message, state: FSMContext):
                              parse_mode="HTML",
                              disable_web_page_preview=True)
 
-        if got_prize(chat_id=message.chat.id):
-            await message.answer(text="Вы уже получили подарок! 🎁")
+        if await got_prize(chat_id=message.chat.id):
+
+            await message.answer(text=complete_texts[2],
+                                 parse_mode="HTML",
+                                 disable_web_page_preview=True)
+
+            prize_data = await get_prize(chat_id=message.chat.id)
+
+            photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+            text, reply_markup = inline_prize_data(prize_data=prize_data)
+            await message.answer_photo(photo=photo,
+                                       caption=text,
+                                       reply_markup=reply_markup)
         else:
             text, reply_markup = inline_get_prize_start()
             await message.answer(text=text,
-                                 reply_markup=reply_markup)
+                                 reply_markup=reply_markup,
+                                 parse_mode="HTML",
+                                 disable_web_page_preview=True
+                                 )
 
-        if participate_in_lottery(chat_id=message.chat.id):
-            await message.answer(text="Вы уже участвуете в лотерее! 🎫")
+        if await participate_in_lottery(chat_id=message.chat.id):
+            text, reply_markup = inline_lottery_start(check=True)
+            await message.answer(text=text,
+                                 reply_markup=reply_markup)
             await message.answer(text=complete_texts[4])
         else:
-            text, reply_markup = inline_lottery_start
+            text, reply_markup = inline_lottery_start()
             await message.answer(text=text,
                                  reply_markup=reply_markup)
 
@@ -591,18 +780,34 @@ async def inform_complete_quest_handler(message: types.Message):
                          parse_mode="HTML",
                          disable_web_page_preview=True)
 
-    if got_prize(chat_id=message.chat.id):
-        await message.answer(text="Вы уже получили подарок! 🎁")
+    if await got_prize(chat_id=message.chat.id):
+
+        await message.answer(text=complete_texts[2],
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
+
+        prize_data = await get_prize(chat_id=message.chat.id)
+
+        photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+        text, reply_markup = inline_prize_data(prize_data=prize_data)
+        await message.answer_photo(photo=photo,
+                                   caption=text,
+                                   reply_markup=reply_markup)
+
     else:
         text, reply_markup = inline_get_prize_start()
         await message.answer(text=text,
-                             reply_markup=reply_markup)
+                             reply_markup=reply_markup,
+                             parse_mode="HTML",
+                             disable_web_page_preview=True)
 
-    if participate_in_lottery(chat_id=message.chat.id):
-        await message.answer(text="Вы уже участвуете в лотерее! 🎫")
+    if await participate_in_lottery(chat_id=message.chat.id):
+        text, reply_markup = inline_lottery_start(check=True)
+        await message.answer(text=text,
+                             reply_markup=reply_markup)
         await message.answer(text=complete_texts[4])
     else:
-        text, reply_markup = inline_lottery_start
+        text, reply_markup = inline_lottery_start()
         await message.answer(text=text,
                              reply_markup=reply_markup)
 
@@ -611,6 +816,6 @@ async def inform_complete_quest_handler(message: types.Message):
 
 # Хендлер для inactive inline кнопок
 @router.callback_query(F.data == "inactive")
-async def inactive_button_handler(callback: types.CallbackQuery):
+async def callback_inactive_button_handler(callback: types.CallbackQuery):
     await callback.answer()
     await update_user_activity(chat_id=callback.message.chat.id)

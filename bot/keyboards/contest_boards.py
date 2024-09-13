@@ -3,8 +3,8 @@ from typing import Optional
 
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
-from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer
-from bot.utils.config import task1_config, task6_config, task7_config, complete_texts
+from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer, Task7Answer
+from bot.utils.config import task1_config, task6_config, task7_config, complete_texts, absolut_task_text, pix_task_text
 
 
 def inline_first_task_process(question_id: int, wrong_answer_id: Optional[int] = None,
@@ -103,13 +103,44 @@ def inline_sixth_task_hum(answer_id: Optional[int] = None):
 def inline_seventh_task_start():
     builder = InlineKeyboardBuilder()
 
-    builder.button(text="Задание от PIX Robotics",
+    builder.button(text="PIX Robotics",
                    callback_data="pix_task")
 
-    builder.button(text="Задание от «Абсолют Страхование»",
+    builder.button(text="«Абсолют Страхование»",
                    callback_data="absolut_task")
 
     text = task7_config.process_text
+
+    return text, builder.as_markup()
+
+
+def inline_absolut_task():
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text="Вернуться в меню",
+                   callback_data="task7_menu")
+
+    text = absolut_task_text
+
+    return text, builder.as_markup()
+
+
+def inline_pix_task(answer_id: Optional[int] = None):
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text="❌ 1️⃣" if answer_id == 1 else "1️⃣",
+                   callback_data=Task7Answer(answer_id=1))
+    builder.button(text="❌ 2️⃣" if answer_id == 2 else "2️⃣",
+                   callback_data=Task7Answer(answer_id=2))
+    builder.button(text="✅ 3️⃣" if answer_id == 3 else "3️⃣",
+                   callback_data=Task7Answer(answer_id=3))
+
+    builder.button(text="Вернуться в меню",
+                   callback_data="task7_menu")
+
+    builder.adjust(3, 1)
+
+    text = pix_task_text
 
     return text, builder.as_markup()
 
@@ -120,7 +151,7 @@ def inline_get_prize_start():
     builder.button(text="🎁 Получить приз!",
                    callback_data="get_prize")
 
-    text = "Участвуй в лотерее!"
+    text = complete_texts[2]
 
     return text, builder.as_markup()
 
@@ -136,11 +167,14 @@ def inline_prize_data(prize_data: dict):
     return text, builder.as_markup()
 
 
-def inline_lottery_start():
+def inline_lottery_start(check: Optional[bool] = None):
     builder = InlineKeyboardBuilder()
-
-    builder.button(text="🎫 Участвовать в лотерее",
-                   callback_data="lottery_start")
+    if check:
+        builder.button(text="✅ Ты участвуешь в лотерее",
+                       callback_data="inactive")
+    else:
+        builder.button(text="🎫 Участвовать в лотерее",
+                       callback_data="lottery_start")
 
     text = complete_texts[3]
 

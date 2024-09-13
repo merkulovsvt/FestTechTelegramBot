@@ -28,7 +28,7 @@ async def main():
     dp.include_routers(user_handlers.router, info_handlers.router, contest_handlers.router)
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(notify, 'interval', minutes=2, args=[bot])
+    scheduler.add_job(notify, 'interval', minutes=1, args=[bot])
     scheduler.start()
 
     await bot.delete_webhook(drop_pending_updates=True)
@@ -39,15 +39,16 @@ async def notify(bot: Bot):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(
-                (User.last_activity < datetime.now() - timedelta(minutes=10)) &
-                (User.notification_check == False)
-            ))
+                (User.last_activity < datetime.now() - timedelta(minutes=20)) &
+                (User.notification_check == False) &
+                (User.task_type != "complete")))
+
         inactive_users = result.scalars().all()
         for user in inactive_users:
             user.notification_check = True
 
             await bot.send_message(chat_id=user.chat_id,
-                                   text="Вы не активны более 10 минут. Не забудьте вернуться!")
+                                   text="Вы не активны более 20 минут! Квест сам себя не пройдёт! 🎉")
         await session.commit()
 
 

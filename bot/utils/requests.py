@@ -2,8 +2,9 @@ import random
 from datetime import datetime
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
-from bot.utils.models import async_session, User, StudyUser, ExpertUser, LotteryPrizes
+from bot.utils.models import async_session, User, StudyUser, ExpertUser, LotteryPrize
 
 
 # User requests
@@ -45,25 +46,64 @@ async def get_task_type(chat_id: int):
         return existing_user.task_type
 
 
-async def get_prize(chat_id: int):
+async def set_prize(chat_id: int):
     async with async_session() as session:
-        available_prizes = session.execute(
-            select(LotteryPrizes).where(LotteryPrizes.quantity > 0)
-        ).scalars().all()
+        result = await session.execute(
+            select(LotteryPrize).options(selectinload(LotteryPrize.company)).where(LotteryPrize.quantity > 0)
+        )
+
+        available_prizes = result.scalars().all()
 
         if not available_prizes:
             return {}
 
         prize = random.choice(available_prizes)
 
-        user = await session.execute(
-            select(User).where(User.chat_id == chat_id)).scalars().first()
+        result = await session.execute(
+            select(User).where(User.chat_id == chat_id))
+
+        user = result.scalars().first()
 
         user.prize_id = prize.id
         prize.quantity -= 1
 
+        data = {
+            "id": prize.id,
+            "name": prize.name,
+            "company_id": prize.company.id,
+            "company_name": prize.company.name,
+            "company_url": prize.company.url,
+        }
+
         await session.commit()
-        return prize.to_dict()
+
+        return data
+
+
+async def get_prize(chat_id: int):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.chat_id == chat_id))
+
+        user = result.scalars().first()
+
+        result = await session.execute(
+            select(LotteryPrize).options(selectinload(LotteryPrize.company)).where(LotteryPrize.id == user.prize_id)
+        )
+
+        prize = result.scalars().first()
+
+        data = {
+            "id": prize.id,
+            "name": prize.name,
+            "company_id": prize.company.id,
+            "company_name": prize.company.name,
+            "company_url": prize.company.url,
+        }
+
+        await session.commit()
+
+        return data
 
 
 async def set_lottery_participation(chat_id: int):

@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, Boolean, String, DateTime
+from sqlalchemy import Column, Integer, Boolean, String, DateTime, ForeignKey
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 engine = create_async_engine("sqlite+aiosqlite:///FestTechBot.db")
 
@@ -53,15 +53,23 @@ class ExpertUser(Base):
     contact = Column(String)
 
 
-class LotteryPrizes(Base):
+class LotteryPrize(Base):
     __tablename__ = 'lottery_prizes'
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=False)
     quantity = Column(Integer, primary_key=False)
+    company_id = Column(String, ForeignKey('companies.id'))
 
-    company_name = Column(String)
-    company_url = Column(String)
+    company = relationship("Company")
+
+
+class Company(Base):
+    __tablename__ = 'companies'
+
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    url = Column(String)
 
 
 async def async_main():

@@ -16,9 +16,13 @@ async def command_start_handler(message: types.Message, state: FSMContext):
     photo = FSInputFile("bot/media/start/start_pic.png")
 
     text, reply_markup = reply_start()
-    await message.answer_photo(photo=photo, caption=text, reply_markup=reply_markup)
+    await message.answer_photo(photo=photo,
+                               caption=text,
+                               reply_markup=reply_markup,
+                               parse_mode="HTML")
 
-    await add_user_if_not_exists(chat_id=message.chat.id, username=message.from_user.username)
+    await add_user_if_not_exists(chat_id=message.chat.id,
+                                 username=message.from_user.username)
     await state.set_state(User.menu_active)
 
     await update_user_activity(chat_id=message.chat.id)
@@ -39,6 +43,7 @@ async def incorrect_user_pre_menu_message_handler(message: types.Message):
 async def incorrect_user_menu_message_handler(message: types.Message):
     text = "Чтобы взаимодействовать с ботом, нажми на кнопку!"
     _, reply_markup = reply_start()
-    await message.answer(text=text, reply_markup=reply_markup)
+    await message.answer(text=text,
+                         reply_markup=reply_markup)
 
     await update_user_activity(chat_id=message.chat.id)

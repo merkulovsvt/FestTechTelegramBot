@@ -13,3 +13,7 @@ class Task3Admin(CallbackData, prefix="task_3"):
 
 class Task6Answer(CallbackData, prefix="task_6"):
     answer_id: int
+
+
+class Task7Answer(CallbackData, prefix="task_7"):
+    answer_id: int
