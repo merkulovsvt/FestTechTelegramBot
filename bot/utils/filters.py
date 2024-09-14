@@ -36,3 +36,9 @@ class GotPrize(Filter):
             result = await session.execute(
                 select(User).where(User.chat_id == callback.message.chat.id))
             return bool(result.scalars().first().prize_id)
+
+
+class IsAdmin(Filter):
+
+    async def __call__(self, message: Message, state: FSMContext) -> bool:
+        return message.chat.id in [268241744, 490082094]

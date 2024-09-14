@@ -200,3 +200,15 @@ async def set_expert_contact(chat_id: int, contact: str):
         existing_user = result.scalars().first()
         existing_user.contact = contact
         await session.commit()
+
+
+# Рандомайзер
+
+async def get_random_user():
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.participate_in_lottery == 1))
+        users = result.scalars().all()
+        winner_username = random.choice(users).username
+        await session.commit()
+        return winner_username

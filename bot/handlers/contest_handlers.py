@@ -28,7 +28,10 @@ router = Router()
                 MTaskFilter(""),
                 StateFilter(User.menu_active, User.info_active))
 async def first_task_start_handler(message: types.Message, state: FSMContext):
-    await message.answer(text=task1_config.start_text)
+    photo = FSInputFile("bot/media/start/code_sticker_example.jpeg")
+
+    await message.answer_photo(photo=photo,
+                               caption=task1_config.start_text)
     await state.set_state(User.quest_active)
 
     await change_task_type(chat_id=message.chat.id,
@@ -283,7 +286,7 @@ async def fifth_task_conditions_handler(message: types.Message):
                 StateFilter(User.quest_active),
                 MTaskFilter("do_task5"))
 async def fifth_task_process_handler(message: types.Message):
-    if message.text.lower() == "33":
+    if message.text.lower() == "847":
         await message.answer(text=task5_config.end_text)
 
         # Старт шестого задания
@@ -343,7 +346,7 @@ async def callback_sixth_task_hum_conditions_handler(callback: types.CallbackQue
                 StateFilter(User.quest_active),
                 MTaskFilter("do_task6_phys"))
 async def sixth_task_phys_process_handler(message: types.Message):
-    if message.text == "33":
+    if "4" in message.text.lower():
         await message.answer(text=task6_config.end_text)
 
         # Старт седьмого задания
@@ -485,13 +488,19 @@ async def seventh_task_absolut_process_handler(message: types.Message):
 
         await message.answer(task7_config.end_text)
 
-        await message.answer(text=complete_texts[0],
-                             parse_mode="HTML",
-                             disable_web_page_preview=True)
+        await asyncio.sleep(2)
 
-        await message.answer(text=complete_texts[1],
-                             parse_mode="HTML",
-                             disable_web_page_preview=True)
+        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        await message.answer_photo(photo=photo,
+                                   caption=complete_texts[0],
+                                   parse_mode="HTML",
+                                   disable_web_page_preview=True)
+
+        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        await message.answer_photo(photo=photo,
+                                   caption=complete_texts[1],
+                                   parse_mode="HTML",
+                                   disable_web_page_preview=True)
 
         text, reply_markup = inline_get_prize_start()
         await message.answer(text=text,
@@ -536,20 +545,29 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
                  "разработка рабочего прототипа займет от 2 часов до 3 дней, и все задачи "
                  "бухгалтера поможет решить")
 
-        await callback.message.answer(text=complete_texts[0],
-                                      parse_mode="HTML",
-                                      disable_web_page_preview=True)
+        await asyncio.sleep(3)
 
-        await callback.message.answer(text=complete_texts[1],
-                                      parse_mode="HTML",
-                                      disable_web_page_preview=True)
+        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        await callback.message.answer_photo(photo=photo,
+                                            caption=complete_texts[0],
+                                            parse_mode="HTML",
+                                            disable_web_page_preview=True)
+
+        await asyncio.sleep(3)
+
+        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        await callback.message.answer_photo(photo=photo,
+                                            caption=complete_texts[1],
+                                            parse_mode="HTML",
+                                            disable_web_page_preview=True)
+
+        await asyncio.sleep(3)
 
         text, reply_markup = inline_get_prize_start()
         await callback.message.answer(text=text,
                                       reply_markup=reply_markup,
                                       parse_mode="HTML",
-                                      disable_web_page_preview=True
-                                      )
+                                      disable_web_page_preview=True)
 
         await change_task_type(chat_id=callback.message.chat.id,
                                task_type="complete")
@@ -568,7 +586,7 @@ async def callback_get_prize_handler(callback: types.CallbackQuery):
     prize_data = await set_prize(chat_id=callback.message.chat.id)
 
     if prize_data:
-        photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+        photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
         text, reply_markup = inline_prize_data(prize_data=prize_data)
         await callback.message.answer_photo(photo=photo,
                                             caption=text,
@@ -593,7 +611,7 @@ async def callback_get_prize_handler(callback: types.CallbackQuery):
 async def callback_used_get_prize_handler(callback: types.CallbackQuery):
     prize_data = await get_prize(chat_id=callback.message.chat.id)
 
-    photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+    photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
     text, reply_markup = inline_prize_data(prize_data=prize_data)
     await callback.message.answer_photo(photo=photo,
                                         caption=text,
@@ -642,7 +660,11 @@ async def return_task_handler(message: types.Message, state: FSMContext):
     task_type = await get_task_type(chat_id=message.chat.id)
 
     if task_type == "start_task1":
-        await message.answer(text=task1_config.start_text)
+        photo = FSInputFile("bot/media/start/code_sticker_example.jpeg")
+
+        await message.answer_photo(photo=photo,
+                                   caption=task1_config.start_text)
+
 
     elif task_type == "do_task1":
         await message.answer(text=task1_config.process_text)
@@ -715,13 +737,17 @@ async def return_task_handler(message: types.Message, state: FSMContext):
                              reply_markup=reply_markup)
 
     elif task_type == "complete":
-        await message.answer(text=complete_texts[0],
-                             parse_mode="HTML",
-                             disable_web_page_preview=True)
+        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        await message.answer_photo(photo=photo,
+                                   caption=complete_texts[0],
+                                   parse_mode="HTML",
+                                   disable_web_page_preview=True)
 
-        await message.answer(text=complete_texts[1],
-                             parse_mode="HTML",
-                             disable_web_page_preview=True)
+        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        await message.answer_photo(photo=photo,
+                                   caption=complete_texts[1],
+                                   parse_mode="HTML",
+                                   disable_web_page_preview=True)
 
         if await got_prize(chat_id=message.chat.id):
 
@@ -731,7 +757,7 @@ async def return_task_handler(message: types.Message, state: FSMContext):
 
             prize_data = await get_prize(chat_id=message.chat.id)
 
-            photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+            photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
             text, reply_markup = inline_prize_data(prize_data=prize_data)
             await message.answer_photo(photo=photo,
                                        caption=text,
@@ -772,13 +798,17 @@ async def inform_quest_handler(message: types.Message):
                 StateFilter(User.quest_active),
                 MTaskFilter("complete"))
 async def inform_complete_quest_handler(message: types.Message):
-    await message.answer(text=complete_texts[0],
-                         parse_mode="HTML",
-                         disable_web_page_preview=True)
+    photo = FSInputFile("bot/media/partners/certificate.jpg")
+    await message.answer_photo(photo=photo,
+                               caption=complete_texts[0],
+                               parse_mode="HTML",
+                               disable_web_page_preview=True)
 
-    await message.answer(text=complete_texts[1],
-                         parse_mode="HTML",
-                         disable_web_page_preview=True)
+    photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+    await message.answer_photo(photo=photo,
+                               caption=complete_texts[1],
+                               parse_mode="HTML",
+                               disable_web_page_preview=True)
 
     if await got_prize(chat_id=message.chat.id):
 
@@ -788,7 +818,7 @@ async def inform_complete_quest_handler(message: types.Message):
 
         prize_data = await get_prize(chat_id=message.chat.id)
 
-        photo = FSInputFile(f"bot/media/logos/company_{prize_data.get('company_id')}.jpg")
+        photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
         text, reply_markup = inline_prize_data(prize_data=prize_data)
         await message.answer_photo(photo=photo,
                                    caption=text,

@@ -4,7 +4,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
 
 from bot.keyboards.user_boards import reply_start
-from bot.utils.requests import add_user_if_not_exists, update_user_activity
+from bot.utils.filters import IsAdmin
+from bot.utils.requests import add_user_if_not_exists, update_user_activity, get_random_user
 from bot.utils.states import User
 
 router = Router()
@@ -15,7 +16,11 @@ router = Router()
 async def command_start_handler(message: types.Message, state: FSMContext):
     photo = FSInputFile("bot/media/start/start_pic.png")
 
-    text, reply_markup = reply_start()
+    if message.chat.id in [268241744, 490082094]:
+        text, reply_markup = reply_start(check=True)
+    else:
+        text, reply_markup = reply_start()
+
     await message.answer_photo(photo=photo,
                                caption=text,
                                reply_markup=reply_markup,
@@ -28,7 +33,7 @@ async def command_start_handler(message: types.Message, state: FSMContext):
     await update_user_activity(chat_id=message.chat.id)
 
 
-ignore_text = ("🎉 Начать квест!", "🔍 Узнать больше про работу центра")
+ignore_text = ("🎉 Начать квест!", "🔍 Узнать больше про работу центра", "Рандомайзер (только для Юли)")
 
 
 # Хендлер для неверных команд до /start
@@ -43,7 +48,21 @@ async def incorrect_user_pre_menu_message_handler(message: types.Message):
 async def incorrect_user_menu_message_handler(message: types.Message):
     text = "Чтобы взаимодействовать с ботом, нажми на кнопку!"
     _, reply_markup = reply_start()
+
+    if message.chat.id in [268241744, 490082094]:
+        _, reply_markup = reply_start(check=True)
+    else:
+        _, reply_markup = reply_start()
+
     await message.answer(text=text,
                          reply_markup=reply_markup)
 
     await update_user_activity(chat_id=message.chat.id)
+
+
+# Хендлер для рандомайзера
+@router.message(F.text == "Рандомайзер (только для Юли)", IsAdmin())
+async def randomizer_handler(message: types.Message):
+    winner = await get_random_user()
+
+    await message.answer(text="@" + winner)
