@@ -488,7 +488,7 @@ async def seventh_task_absolut_process_handler(message: types.Message):
 
         await message.answer(task7_config.end_text)
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(1.5)
 
         photo = FSInputFile("bot/media/partners/certificate.jpg")
         await message.answer_photo(photo=photo,
@@ -496,11 +496,15 @@ async def seventh_task_absolut_process_handler(message: types.Message):
                                    parse_mode="HTML",
                                    disable_web_page_preview=True)
 
+        await asyncio.sleep(1.5)
+
         photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
         await message.answer_photo(photo=photo,
                                    caption=complete_texts[1],
                                    parse_mode="HTML",
                                    disable_web_page_preview=True)
+
+        await asyncio.sleep(1.5)
 
         text, reply_markup = inline_get_prize_start()
         await message.answer(text=text,
@@ -545,7 +549,7 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
                  "разработка рабочего прототипа займет от 2 часов до 3 дней, и все задачи "
                  "бухгалтера поможет решить")
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(1.5)
 
         photo = FSInputFile("bot/media/partners/certificate.jpg")
         await callback.message.answer_photo(photo=photo,
@@ -553,7 +557,7 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
                                             parse_mode="HTML",
                                             disable_web_page_preview=True)
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(1.5)
 
         photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
         await callback.message.answer_photo(photo=photo,
@@ -561,7 +565,7 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
                                             parse_mode="HTML",
                                             disable_web_page_preview=True)
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(1.5)
 
         text, reply_markup = inline_get_prize_start()
         await callback.message.answer(text=text,

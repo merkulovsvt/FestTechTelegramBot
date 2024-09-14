@@ -64,5 +64,9 @@ async def incorrect_user_menu_message_handler(message: types.Message):
 @router.message(F.text == "Рандомайзер (только для Юли)", IsAdmin())
 async def randomizer_handler(message: types.Message):
     winner = await get_random_user()
+    if winner:
+        text = "@" + winner
+    else:
+        text = "Null user, retry"
 
-    await message.answer(text="@" + winner)
+    await message.answer(text=text)

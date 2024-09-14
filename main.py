@@ -31,7 +31,7 @@ async def main():
     scheduler.add_job(notify, 'interval', minutes=1, args=[bot])
     scheduler.start()
 
-    await bot.delete_webhook(drop_pending_updates=True)
+    # await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
@@ -45,10 +45,14 @@ async def notify(bot: Bot):
 
         inactive_users = result.scalars().all()
         for user in inactive_users:
-            user.notification_check = True
+            print(user.username)
+            try:
+                await bot.send_message(chat_id=user.chat_id,
+                                       text="Вы не активны более 20 минут! Квест сам себя не пройдёт! 🎉")
 
-            await bot.send_message(chat_id=user.chat_id,
-                                   text="Вы не активны более 20 минут! Квест сам себя не пройдёт! 🎉")
+                user.notification_check = True
+            except Exception as e:
+                print(f"{user.username} has blocked the bot")
         await session.commit()
 
 

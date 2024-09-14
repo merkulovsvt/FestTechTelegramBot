@@ -24,7 +24,7 @@ class User(Base):
     prize_id = Column(Integer, default=None)
     participate_in_lottery = Column(Boolean, default=False)
 
-    last_activity = Column(DateTime, default=datetime.now(), onupdate=datetime.now())
+    last_activity = Column(DateTime, default=datetime.now())
     notification_check = Column(Boolean, default=False)
 
 
