@@ -1,32 +1,33 @@
 import random
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from sqlalchemy.orm import selectinload
 
 from bot.utils.models import async_session, User, StudyUser, ExpertUser, LotteryPrize
 
 
 # User requests
-async def update_user_activity(chat_id: int):
+async def update_user_activity(chat_id: int, username: str):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.last_activity = datetime.now()
-        existing_user.notification_check = False
+
+        user = result.scalars().first()
+
+        if result:
+            user.last_activity = datetime.now()
+            user.notification_check = False
+        else:
+            new_user = User(chat_id=chat_id, username=username)
+            session.add(new_user)
         await session.commit()
 
 
-async def add_user_if_not_exists(chat_id: int, username: str):
+async def get_all_chat_ids():
     async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        if not existing_user:
-            new_user = User(chat_id=chat_id, username=username)
-            session.add(new_user)
-            await session.commit()
+        result = await session.execute(select(distinct(User.chat_id)))
+        return [row[0] for row in result.fetchall()]
 
 
 async def change_task_type(chat_id: int, task_type: str):
@@ -130,75 +131,37 @@ async def got_prize(chat_id: int):
 
 # StudyUser requests
 
-async def set_study_name(chat_id: int, username: str, name: str):
+async def set_student_data(chat_id: int, **kwargs):
     async with async_session() as session:
         result = await session.execute(
             select(StudyUser).where(StudyUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        if existing_user:
-            existing_user.name = name
+        study_user = result.scalars().first()
+
+        if study_user:
+            for key, value in kwargs.items():
+                if hasattr(study_user, key):
+                    setattr(study_user, key, value)
         else:
-            session.add(StudyUser(chat_id=chat_id, username=username, name=name))
+            session.add(StudyUser(chat_id=chat_id, **kwargs))
 
-        await session.commit()
-
-
-async def set_study_program(chat_id: int, program: str):
-    async with async_session() as session:
-        result = await session.execute(
-            select(StudyUser).where(StudyUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.program = program
-        await session.commit()
-
-
-async def set_study_contact(chat_id: int, contact: str):
-    async with async_session() as session:
-        result = await session.execute(
-            select(StudyUser).where(StudyUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.contact = contact
         await session.commit()
 
 
 # ExpertUser requests
 
-async def set_expert_name(chat_id: int, username: str, name: str):
+async def set_expert_data(chat_id: int, **kwargs):
     async with async_session() as session:
         result = await session.execute(
             select(ExpertUser).where(ExpertUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        if existing_user:
-            existing_user.name = name
+        expert_user = result.scalars().first()
+
+        if expert_user:
+            for key, value in kwargs.items():
+                if hasattr(expert_user, key):
+                    setattr(expert_user, key, value)
         else:
-            session.add(ExpertUser(chat_id=chat_id, username=username, name=name))
-        await session.commit()
+            session.add(ExpertUser(chat_id=chat_id, **kwargs))
 
-
-async def set_expert_area_of_expertise(chat_id: int, area_of_expertise: str):
-    async with async_session() as session:
-        result = await session.execute(
-            select(ExpertUser).where(ExpertUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.area_of_expertise = area_of_expertise
-        await session.commit()
-
-
-async def set_expert_place_of_work(chat_id: int, place_of_work: str):
-    async with async_session() as session:
-        result = await session.execute(
-            select(ExpertUser).where(ExpertUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.place_of_work = place_of_work
-        await session.commit()
-
-
-async def set_expert_contact(chat_id: int, contact: str):
-    async with async_session() as session:
-        result = await session.execute(
-            select(StudyUser).where(StudyUser.chat_id == chat_id))
-        existing_user = result.scalars().first()
-        existing_user.contact = contact
         await session.commit()
 
 

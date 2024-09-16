@@ -38,7 +38,13 @@ class GotPrize(Filter):
             return bool(result.scalars().first().prize_id)
 
 
-class IsAdmin(Filter):
+class MIsAdmin(Filter):
 
     async def __call__(self, message: Message, state: FSMContext) -> bool:
         return message.chat.id in [268241744, 490082094]
+
+
+class CIsAdmin(Filter):
+
+    async def __call__(self, callback: CallbackQuery, state: FSMContext) -> bool:
+        return callback.message.chat.id in [268241744, 490082094]

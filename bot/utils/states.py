@@ -1,6 +1,10 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
+class Admin(StatesGroup):
+    typing_message_text = State()
+
+
 class User(StatesGroup):
     menu_active = State()
     quest_active = State()

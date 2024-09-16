@@ -4,8 +4,9 @@ from sqlalchemy import Column, Integer, Boolean, String, DateTime, ForeignKey
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, relationship
 
-engine = create_async_engine("sqlite+aiosqlite:///FestTechBot.db")
+from bot.utils.config import BASE_DIR
 
+engine = create_async_engine(f"sqlite+aiosqlite:///{BASE_DIR}/FestTechBot.db")
 async_session = async_sessionmaker(engine)
 
 

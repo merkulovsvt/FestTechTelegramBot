@@ -10,12 +10,12 @@ from dotenv import load_dotenv
 from sqlalchemy import select
 
 from bot.handlers import user_handlers, info_handlers, contest_handlers
+from bot.middlewares.user_activity import UserActivity
+from bot.utils.config import start_bot, stop_bot
 from bot.utils.models import async_main
 from bot.utils.models import async_session, User
 
 load_dotenv()
-
-storage = RedisStorage.from_url(url=os.getenv("CELERY_URL"))
 
 
 async def main():
@@ -24,19 +24,27 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
-    dp = Dispatcher(storage=storage)
+    dp = Dispatcher(storage=RedisStorage.from_url(url=os.getenv("CELERY_URL")))
+
+    dp.startup.register(start_bot)
+    dp.shutdown.register(stop_bot)
+
     dp.include_routers(user_handlers.router, info_handlers.router, contest_handlers.router)
+    dp.update.outer_middleware(UserActivity())
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(notify, 'interval', minutes=1, args=[bot])
     scheduler.start()
 
-    # await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
 
 
 async def notify(bot: Bot):
     async with async_session() as session:
+
         result = await session.execute(
             select(User).where(
                 (User.last_activity < datetime.now() - timedelta(minutes=20)) &
@@ -45,7 +53,6 @@ async def notify(bot: Bot):
 
         inactive_users = result.scalars().all()
         for user in inactive_users:
-            print(user.username)
             try:
                 await bot.send_message(chat_id=user.chat_id,
                                        text="Вы не активны более 20 минут! Квест сам себя не пройдёт! 🎉")

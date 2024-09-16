@@ -2,7 +2,7 @@ import asyncio
 import os
 
 from aiogram import Router, types, F
-from aiogram.filters import StateFilter
+from aiogram.filters import StateFilter, or_f
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile
 from dotenv import load_dotenv
@@ -12,12 +12,13 @@ from bot.keyboards.contest_boards import inline_first_task_process, inline_third
     inline_third_task_admin_result, inline_seventh_task_start, inline_get_prize_start, inline_absolut_task, \
     inline_pix_task
 from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer, Task7Answer
-from bot.utils.config import task1_config, task2_config, task3_config, task4_config, task5_config, task6_config, \
-    task7_config, complete_texts
+from bot.utils.config import BASE_DIR
 from bot.utils.filters import MTaskFilter, CTaskFilter, GotPrize
-from bot.utils.requests import change_task_type, get_task_type, update_user_activity, got_prize, set_prize, \
+from bot.utils.requests import change_task_type, get_task_type, got_prize, set_prize, \
     participate_in_lottery, set_lottery_participation, get_prize
 from bot.utils.states import User
+from bot.utils.texts import task1_config, task2_config, task3_config, task4_config, task5_config, task6_config, \
+    task7_config, complete_texts
 
 load_dotenv()
 router = Router()
@@ -28,7 +29,7 @@ router = Router()
                 MTaskFilter(""),
                 StateFilter(User.menu_active, User.info_active))
 async def first_task_start_handler(message: types.Message, state: FSMContext):
-    photo = FSInputFile("bot/media/start/code_sticker_example.jpeg")
+    photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/start/code_sticker_example.jpeg"))
 
     await message.answer_photo(photo=photo,
                                caption=task1_config.start_text)
@@ -36,8 +37,6 @@ async def first_task_start_handler(message: types.Message, state: FSMContext):
 
     await change_task_type(chat_id=message.chat.id,
                            task_type="start_task1")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для условия первого задания
@@ -50,7 +49,7 @@ async def first_task_conditions_handler(message: types.Message):
 
         await message.answer(text=task1_config.process_text)
 
-        photo = FSInputFile("bot/media/task1/pic_1.jpeg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/task1/pic_1.jpeg"))
         text, reply_markup = inline_first_task_process(question_id=1)
 
         await message.answer_photo(photo=photo,
@@ -60,8 +59,6 @@ async def first_task_conditions_handler(message: types.Message):
                                task_type="do_task1")
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки первого задания
@@ -73,7 +70,7 @@ async def callback_first_task_process_handler(callback: types.CallbackQuery, cal
     answer_id = callback_data.answer_id
 
     if question_id == answer_id and question_id < 4:
-        photo = FSInputFile(f"bot/media/task1/pic_{question_id + 1}.jpeg")
+        photo = FSInputFile(os.path.join(BASE_DIR, f"bot/media/task1/pic_{question_id + 1}.jpeg"))
 
         _, reply_markup = inline_first_task_process(question_id=question_id,
                                                     correct_answer_id=answer_id)
@@ -109,8 +106,6 @@ async def callback_first_task_process_handler(callback: types.CallbackQuery, cal
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для условия второго задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -129,8 +124,6 @@ async def second_task_conditions_handler(message: types.Message):
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для обработки второго задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -148,8 +141,6 @@ async def second_task_process_handler(message: types.Message):
     else:
         await message.answer(text="Попробуй ещё раз, проверь опечатки")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для условия третьего задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -164,8 +155,6 @@ async def third_task_conditions_handler(message: types.Message):
                                task_type="do_task3")
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки третьего задания (фото)
@@ -184,8 +173,6 @@ async def third_task_photo_process_handler(message: types.Message):
 
     await message.answer(text="Ждите проверку")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для обработки третьего задания (не фото)
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -193,8 +180,6 @@ async def third_task_photo_process_handler(message: types.Message):
                 MTaskFilter("do_task3"), ~F.photo)
 async def third_task_not_photo_process_handler(message: types.Message):
     await message.answer("Это не фото 😞")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для проверки третьего задания (только админ)
@@ -211,7 +196,6 @@ async def callback_third_task_photo_process_handler(callback: types.CallbackQuer
 
         await callback.bot.send_message(chat_id=chat_id,
                                         text=task3_config.end_text)
-
         # Старт четвертого задания
         await callback.bot.send_message(chat_id=chat_id,
                                         text=task4_config.start_text)
@@ -222,8 +206,6 @@ async def callback_third_task_photo_process_handler(callback: types.CallbackQuer
                                         text="Фото не подходит, попробуйте снова!")
 
     await callback.answer()
-
-    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для условий четвертого задания
@@ -243,8 +225,6 @@ async def fourth_task_conditions_handler(message: types.Message):
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для обработки четвертого задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -261,8 +241,6 @@ async def fourth_task_process_handler(message: types.Message):
     else:
         await message.answer(text="Давай ещё одну попытку!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для условий пятого задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -277,8 +255,6 @@ async def fifth_task_conditions_handler(message: types.Message):
                                task_type="do_task5")
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки пятого задания
@@ -297,8 +273,6 @@ async def fifth_task_process_handler(message: types.Message):
         await message.answer(
             text="Кажется, нужна ещё одна попытка (мы не узнаем, если ты будешь пользоваться калькулятором)")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для условий шестого задания (физ)
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -308,7 +282,7 @@ async def sixth_task_phys_conditions_handler(message: types.Message):
     if "эффективность" in message.text.lower():
         await message.answer(text="Ура, код верный! Переходим к шестому заданию!")
 
-        photo = FSInputFile("bot/media/task6/pic_1.png")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/task6/pic_1.png"))
         text, reply_markup = inline_sixth_task_phys()
         await message.answer_photo(photo=photo,
                                    caption=text,
@@ -319,13 +293,11 @@ async def sixth_task_phys_conditions_handler(message: types.Message):
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для условия шестого задания (гум)
 @router.callback_query(StateFilter(User.quest_active),
                        F.data == "task6_hum",
-                       CTaskFilter("do_task6_phys") or CTaskFilter("do_task6_hum"))
+                       or_f(CTaskFilter("do_task6_phys"), CTaskFilter("do_task6_hum")))
 async def callback_sixth_task_hum_conditions_handler(callback: types.CallbackQuery):
     await change_task_type(chat_id=callback.message.chat.id,
                            task_type="do_task6_hum")
@@ -337,8 +309,6 @@ async def callback_sixth_task_hum_conditions_handler(callback: types.CallbackQue
     await callback.message.answer(text=text,
                                   reply_markup=reply_markup)
     await callback.answer()
-
-    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для обработки шестого задания (физ)
@@ -356,8 +326,6 @@ async def sixth_task_phys_process_handler(message: types.Message):
     else:
         await message.answer(
             text="Кажется, тебе нужна ещё одна попытка")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки шестого задания (гум)
@@ -383,8 +351,6 @@ async def callback_sixth_task_phys_process_handler(callback: types.CallbackQuery
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для условий седьмого задания
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -404,8 +370,6 @@ async def seventh_task_conditions_handler(message: types.Message):
     else:
         await message.answer(text="Код неверный, попробуй ещё раз!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для меню седьмого задания через inline кнопку
 @router.callback_query(StateFilter(User.quest_active),
@@ -421,8 +385,6 @@ async def callback_absolut_seventh_task_menu_handler(callback: types.CallbackQue
                            task_type="do_task7")
 
     await callback.answer()
-
-    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для меню седьмого задания через inline кнопку
@@ -440,8 +402,6 @@ async def callback_pix_seventh_task_menu_handler(callback: types.CallbackQuery):
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для обработки седьмого задания (absolut)
 @router.callback_query(StateFilter(User.quest_active),
@@ -457,8 +417,6 @@ async def callback_seventh_task_absolut_conditions_handler(callback: types.Callb
                            task_type="do_task7_absolut")
 
     await callback.answer()
-
-    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для обработки седьмого задания (pix)
@@ -476,8 +434,6 @@ async def callback_seventh_task_absolut_conditions_handler(callback: types.Callb
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для обработки седьмого задания (absolut)
 @router.message(~F.text.lower().contains("узнать больше про работу центра"),
@@ -488,23 +444,23 @@ async def seventh_task_absolut_process_handler(message: types.Message):
 
         await message.answer(task7_config.end_text)
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
-        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/certificate.jpg"))
         await message.answer_photo(photo=photo,
                                    caption=complete_texts[0],
                                    parse_mode="HTML",
                                    disable_web_page_preview=True)
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
-        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/logos/company_3.jpg"))
         await message.answer_photo(photo=photo,
                                    caption=complete_texts[1],
                                    parse_mode="HTML",
                                    disable_web_page_preview=True)
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
         text, reply_markup = inline_get_prize_start()
         await message.answer(text=text,
@@ -516,8 +472,6 @@ async def seventh_task_absolut_process_handler(message: types.Message):
                                task_type="complete")
     else:
         await message.answer(text="Давай пересчитаем ещё раз")
-
-    await update_user_activity(chat_id=message.chat.id)
 
 
 # Хендлер для обработки седьмого задания (pix)
@@ -549,23 +503,23 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
                  "разработка рабочего прототипа займет от 2 часов до 3 дней, и все задачи "
                  "бухгалтера поможет решить")
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
-        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/certificate.jpg"))
         await callback.message.answer_photo(photo=photo,
                                             caption=complete_texts[0],
                                             parse_mode="HTML",
                                             disable_web_page_preview=True)
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
-        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/logos/company_3.jpg"))
         await callback.message.answer_photo(photo=photo,
                                             caption=complete_texts[1],
                                             parse_mode="HTML",
                                             disable_web_page_preview=True)
 
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
 
         text, reply_markup = inline_get_prize_start()
         await callback.message.answer(text=text,
@@ -578,8 +532,6 @@ async def callback_seventh_task_absolut_process_handler(callback: types.Callback
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для обработки получения приза (первичное)
 @router.callback_query(StateFilter(User.quest_active),
@@ -590,7 +542,8 @@ async def callback_get_prize_handler(callback: types.CallbackQuery):
     prize_data = await set_prize(chat_id=callback.message.chat.id)
 
     if prize_data:
-        photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
+        photo = FSInputFile(
+            os.path.join(BASE_DIR, f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg"))
         text, reply_markup = inline_prize_data(prize_data=prize_data)
         await callback.message.answer_photo(photo=photo,
                                             caption=text,
@@ -604,8 +557,6 @@ async def callback_get_prize_handler(callback: types.CallbackQuery):
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для обработки получения приза (повторное)
 @router.callback_query(StateFilter(User.quest_active),
@@ -615,7 +566,7 @@ async def callback_get_prize_handler(callback: types.CallbackQuery):
 async def callback_used_get_prize_handler(callback: types.CallbackQuery):
     prize_data = await get_prize(chat_id=callback.message.chat.id)
 
-    photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
+    photo = FSInputFile(os.path.join(BASE_DIR, f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg"))
     text, reply_markup = inline_prize_data(prize_data=prize_data)
     await callback.message.answer_photo(photo=photo,
                                         caption=text,
@@ -632,8 +583,6 @@ async def callback_used_get_prize_handler(callback: types.CallbackQuery):
                                       reply_markup=reply_markup)
 
     await callback.answer()
-
-    await update_user_activity(chat_id=callback.message.chat.id)
 
 
 # Хендлер для обработки лотереи (первичное)
@@ -652,8 +601,6 @@ async def callback_lottery_prize_handler(callback: types.CallbackQuery):
 
     await callback.answer()
 
-    await update_user_activity(chat_id=callback.message.chat.id)
-
 
 # Хендлер для возвращения к заданию
 @router.message(F.text.lower().contains("начать квест"),
@@ -664,7 +611,7 @@ async def return_task_handler(message: types.Message, state: FSMContext):
     task_type = await get_task_type(chat_id=message.chat.id)
 
     if task_type == "start_task1":
-        photo = FSInputFile("bot/media/start/code_sticker_example.jpeg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/start/code_sticker_example.jpeg"))
 
         await message.answer_photo(photo=photo,
                                    caption=task1_config.start_text)
@@ -673,7 +620,7 @@ async def return_task_handler(message: types.Message, state: FSMContext):
     elif task_type == "do_task1":
         await message.answer(text=task1_config.process_text)
 
-        photo = FSInputFile("bot/media/task1/pic_1.jpeg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/task1/pic_1.jpeg"))
         text, reply_markup = inline_first_task_process(question_id=1)
 
         await message.answer_photo(photo=photo,
@@ -711,7 +658,7 @@ async def return_task_handler(message: types.Message, state: FSMContext):
         await message.answer(text=task6_config.start_text)
 
     elif task_type == "do_task6_phys":
-        photo = FSInputFile("bot/media/task6/pic_1.png")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/task6/pic_1.png"))
         text, reply_markup = inline_sixth_task_phys()
         await message.answer_photo(photo=photo,
                                    caption=text,
@@ -741,13 +688,13 @@ async def return_task_handler(message: types.Message, state: FSMContext):
                              reply_markup=reply_markup)
 
     elif task_type == "complete":
-        photo = FSInputFile("bot/media/partners/certificate.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/certificate.jpg"))
         await message.answer_photo(photo=photo,
                                    caption=complete_texts[0],
                                    parse_mode="HTML",
                                    disable_web_page_preview=True)
 
-        photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+        photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/logos/company_3.jpg"))
         await message.answer_photo(photo=photo,
                                    caption=complete_texts[1],
                                    parse_mode="HTML",
@@ -761,7 +708,8 @@ async def return_task_handler(message: types.Message, state: FSMContext):
 
             prize_data = await get_prize(chat_id=message.chat.id)
 
-            photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
+            photo = FSInputFile(
+                os.path.join(BASE_DIR, f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg"))
             text, reply_markup = inline_prize_data(prize_data=prize_data)
             await message.answer_photo(photo=photo,
                                        caption=text,
@@ -784,8 +732,6 @@ async def return_task_handler(message: types.Message, state: FSMContext):
             await message.answer(text=text,
                                  reply_markup=reply_markup)
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для обработки повторного вызова квеста изнутри (not complete)
 @router.message(F.text.lower().contains("начать квест"),
@@ -794,21 +740,19 @@ async def return_task_handler(message: types.Message, state: FSMContext):
 async def inform_quest_handler(message: types.Message):
     await message.answer(text="Вы уже проходите квест!")
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для обработки повторного вызова квеста изнутри (complete)
 @router.message(F.text.lower().contains("начать квест"),
                 StateFilter(User.quest_active),
                 MTaskFilter("complete"))
 async def inform_complete_quest_handler(message: types.Message):
-    photo = FSInputFile("bot/media/partners/certificate.jpg")
+    photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/certificate.jpg"))
     await message.answer_photo(photo=photo,
                                caption=complete_texts[0],
                                parse_mode="HTML",
                                disable_web_page_preview=True)
 
-    photo = FSInputFile("bot/media/partners/logos/company_3.jpg")
+    photo = FSInputFile(os.path.join(BASE_DIR, "bot/media/partners/logos/company_3.jpg"))
     await message.answer_photo(photo=photo,
                                caption=complete_texts[1],
                                parse_mode="HTML",
@@ -822,7 +766,8 @@ async def inform_complete_quest_handler(message: types.Message):
 
         prize_data = await get_prize(chat_id=message.chat.id)
 
-        photo = FSInputFile(f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg")
+        photo = FSInputFile(
+            os.path.join(BASE_DIR, f"bot/media/partners/logos/company_{prize_data.get('company_id')}.jpg"))
         text, reply_markup = inline_prize_data(prize_data=prize_data)
         await message.answer_photo(photo=photo,
                                    caption=text,
@@ -845,11 +790,8 @@ async def inform_complete_quest_handler(message: types.Message):
         await message.answer(text=text,
                              reply_markup=reply_markup)
 
-    await update_user_activity(chat_id=message.chat.id)
-
 
 # Хендлер для inactive inline кнопок
 @router.callback_query(F.data == "inactive")
 async def callback_inactive_button_handler(callback: types.CallbackQuery):
     await callback.answer()
-    await update_user_activity(chat_id=callback.message.chat.id)

@@ -4,7 +4,7 @@ from typing import Optional
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 from bot.utils.callbacks import Task1Answer, Task3Admin, Task6Answer, Task7Answer
-from bot.utils.config import task1_config, task6_config, task7_config, complete_texts, absolut_task_text, pix_task_text
+from bot.utils.texts import task1_config, task6_config, task7_config, complete_texts, absolut_task_text, pix_task_text
 
 
 def inline_first_task_process(question_id: int, wrong_answer_id: Optional[int] = None,
