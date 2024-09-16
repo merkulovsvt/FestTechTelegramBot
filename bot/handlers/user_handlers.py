@@ -1,4 +1,5 @@
 import os
+import re
 
 from aiogram import Router, types, F
 from aiogram.filters import CommandStart, StateFilter
@@ -67,7 +68,8 @@ async def randomizer_handler(message: types.Message):
 # Хендлер для отправки сообщения
 @router.message(F.text == "/sendMessage", MIsAdmin())
 async def start_send_message_handler(message: types.Message, state: FSMContext):
-    await message.answer(text="✍️ Введите сообщение:")
+    await message.answer(
+        text="✍️ Введите сообщение:\n\nДобавить url-кнопку — *button_name-button_url*")
 
     await state.set_state(Admin.typing_message_text)
 
@@ -75,10 +77,25 @@ async def start_send_message_handler(message: types.Message, state: FSMContext):
 # Хендлер для отправки сообщений
 @router.message(StateFilter(Admin.typing_message_text), MIsAdmin(), F.text)
 async def get_message_handler(message: types.Message, state: FSMContext):
-    await state.update_data(admin_message=message.text)
+    await state.update_data(message_text=message.text)
 
-    text, reply_markup = inline_send_message_menu(admin_text=message.text)
-    await message.answer(text=text,
+    result = re.search(r'\*(.*?)\*', message.text)
+    if result:
+        button_name, button_url = result.group(1).split('-')
+        message_text = re.sub(r'\*.*?\*', '', message.text)
+
+        await state.update_data(button_name=button_name,
+                                button_url=button_url)
+
+        reply_markup = inline_send_message_menu(button_name=button_name,
+                                                button_url=button_url)
+    else:
+        message_text = message.text
+        reply_markup = inline_send_message_menu()
+
+    await state.update_data(message_text=message_text)
+
+    await message.answer(text=message_text,
                          reply_markup=reply_markup,
                          parse_mode="HTML")
 
@@ -87,48 +104,75 @@ async def get_message_handler(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == 'admin_message_confirm', CIsAdmin())
 async def callback_confirm_send_message_handler(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    message_text = data.get('admin_message')
+
+    message_text = data.get('message_text')
+    button_name = data.get('button_name')
+    button_url = data.get('button_url')
+
+    reply_markup = None
+    if button_name and button_url:
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=button_name,
+                                  url=button_url)]])
+    cnt = 0
+    inline_keyboard = []
+
+    chat_ids = await get_all_chat_ids()
+    # chat_ids = [897706487, 490082094, 268241744]
+
+    for chat_id in chat_ids:
+        try:
+            cnt += 1
+            await callback.bot.send_message(chat_id=chat_id,
+                                            text=message_text,
+                                            reply_markup=reply_markup,
+                                            disable_web_page_preview=True,
+                                            parse_mode="HTML")
+        except Exception as e:
+            continue
+
+    if reply_markup:
+        inline_keyboard.append([InlineKeyboardButton(text=button_name,
+                                                     url=button_url)])
+
+    if cnt:
+        inline_keyboard.append([InlineKeyboardButton(text=f"✅ Сообщение отправлено ({cnt})",
+                                                     callback_data="inactive")])
+    else:
+        inline_keyboard.append([InlineKeyboardButton(text="❌ Отменено",
+                                                     callback_data="inactive")])
+
+    await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=inline_keyboard))
 
     await state.clear()
     await state.set_state(User.menu_active)
-
-    if message_text:
-        cnt = 0
-        chat_ids = await get_all_chat_ids()
-        # chat_ids = [897706487, 490082094, 268241744]
-        for chat_id in chat_ids:
-            try:
-                await callback.bot.send_message(chat_id=chat_id,
-                                                text=message_text,
-                                                parse_mode="HTML")
-                cnt += 1
-            except:
-                continue
-
-        if cnt:
-            await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text=f"✅ Сообщение отправлено ({cnt})",
-                                      callback_data="inactive")]]))
-
-        else:
-            await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="❌ Отменено (ошибка)",
-                                      callback_data="inactive")]]))
-
-    else:
-        await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Отменено (пустое сообщение)",
-                                  callback_data="inactive")]]))
-
     await callback.answer()
 
 
 # Хендлер для отмены отправки сообщения
 @router.callback_query(F.data == 'admin_message_decline', CIsAdmin())
 async def callback_decline_send_message_handler(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Отменено", callback_data="inactive")]]))
+    data = await state.get_data()
 
+    button_name = data.get('button_name')
+    button_url = data.get('button_url')
+
+    reply_markup = None
+    if button_name and button_url:
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=button_name,
+                                  url=button_url)]])
+    inline_keyboard = []
+
+    if reply_markup:
+        inline_keyboard.append([InlineKeyboardButton(text=button_name,
+                                                     url=button_url)])
+    inline_keyboard.append([InlineKeyboardButton(text="❌ Отменено",
+                                                 callback_data="inactive")])
+
+    await callback.message.edit_reply_markup(reply_markup=InlineKeyboardMarkup(inline_keyboard=inline_keyboard))
+
+    await state.clear()
     await state.set_state(User.menu_active)
     await callback.answer()
 
@@ -136,6 +180,7 @@ async def callback_decline_send_message_handler(callback: types.CallbackQuery, s
 # Хендлер для редактирования сообщения для отправки
 @router.callback_query(F.data == 'admin_message_edit', CIsAdmin())
 async def callback_edit_send_message_handler(callback: types.CallbackQuery):
-    await callback.message.edit_text(text="♻️ Введите сообщение:")
+    await callback.message.edit_text(text="♻️ Введите сообщение:",
+                                     reply_markup=None)
 
     await callback.answer()

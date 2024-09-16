@@ -20,10 +20,13 @@ def reply_start(check: Optional[bool] = None):
                                    input_field_placeholder="Нажмите на кнопку")
 
 
-def inline_send_message_menu(admin_text: str):
+def inline_send_message_menu(button_name: Optional[str] = None, button_url: Optional[str] = None):
     builder = InlineKeyboardBuilder()
+    check = False
 
-    text = "Сообщение:\n\n" + admin_text
+    if button_name and button_url:
+        builder.button(text=button_name, url=button_url)
+        check = True
 
     builder.button(text='✅ Подтвердить',
                    callback_data='admin_message_confirm')
@@ -33,6 +36,9 @@ def inline_send_message_menu(admin_text: str):
 
     builder.button(text='♻️ Редактировать',
                    callback_data='admin_message_edit')
+    if check:
+        builder.adjust(1, 2, 1)
+    else:
+        builder.adjust(2, 1)
 
-    builder.adjust(2, 1)
-    return text, builder.as_markup()
+    return builder.as_markup()
