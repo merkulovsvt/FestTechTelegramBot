@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from sqlalchemy import select
 
@@ -24,7 +23,7 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
-    dp = Dispatcher(storage=RedisStorage.from_url(url=os.getenv("CELERY_URL")))
+    dp = Dispatcher(storage=RedisStorage.from_url(url=os.getenv("REDIS_URL")))
 
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
@@ -32,9 +31,9 @@ async def main():
     dp.include_routers(user_handlers.router, info_handlers.router, contest_handlers.router)
     dp.update.outer_middleware(UserActivity())
 
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(notify, 'interval', minutes=1, args=[bot])
-    scheduler.start()
+    # scheduler = AsyncIOScheduler()
+    # scheduler.add_job(notify, 'interval', minutes=1, args=[bot])
+    # scheduler.start()
 
     try:
         await dp.start_polling(bot)

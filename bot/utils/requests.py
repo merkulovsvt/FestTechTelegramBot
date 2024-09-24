@@ -15,7 +15,7 @@ async def update_user_activity(chat_id: int, username: str):
 
         user = result.scalars().first()
 
-        if result:
+        if user:
             user.last_activity = datetime.now()
             user.notification_check = False
         else:
@@ -26,7 +26,8 @@ async def update_user_activity(chat_id: int, username: str):
 
 async def get_all_chat_ids():
     async with async_session() as session:
-        result = await session.execute(select(distinct(User.chat_id)))
+        result = await session.execute(
+            select(distinct(User.chat_id)))
         return [row[0] for row in result.fetchall()]
 
 
